@@ -1,6 +1,12 @@
 #include "SpellCastEventHandler.h"
+#include "EquipEventHandler.h"
 #include "InputEventHandler.h"
 #include "MenuHandler.h"
+
+bool SetupEquipHandler() {
+	EquipEventHandler::Register();
+	return true;
+}
 
 bool SetupSettings() {
 	SwitchManager::GetSingleton()->ImportSettings();

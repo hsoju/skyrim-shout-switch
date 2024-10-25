@@ -98,6 +98,7 @@ void MessageHandler(SKSE::MessagingInterface::Message* a_msg)
 		}
 		break;
 	case SKSE::MessagingInterface::kDataLoaded:
+		SetupEquipHandler();
 		SetupSettings();
 		break;
 	}
