@@ -19,19 +19,6 @@ void SpellCastEventHandler::EquipPower(RE::Actor* player, RE::TESForm* power)
 	}
 }
 
-void HandleShoutCooldown(RE::TESObjectREFR* caster)
-{
-	RE::Actor* player = caster->As<RE::Actor>();
-	auto& runtimeData = player->GetActorRuntimeData();
-	auto* process = runtimeData.currentProcess;
-	if (process) {
-		auto* high_data = process->high;
-		if (high_data) {
-			auto recovery = high_data->voiceRecoveryTime;
-		}
-	}
-}
-
 void SpellCastEventHandler::HandleShout(RE::TESObjectREFR* caster, RE::SpellItem* casted_power)
 {
 	auto manager = SwitchManager::GetSingleton();
