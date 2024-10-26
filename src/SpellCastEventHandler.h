@@ -26,16 +26,18 @@ public:
 		}
 
 		RE::SpellItem* casted_spell = RE::TESForm::LookupByID<RE::SpellItem>(a_event->spell);
-		auto spell_type = casted_spell->GetSpellType();
-		if (spell_type == RE::MagicSystem::SpellType::kVoicePower) {
-			HandleShout(caster, casted_spell);
-		} else {
-			auto player = caster->As<RE::Actor>();
-			if (casted_spell == player->GetActorRuntimeData().selectedPower) {
-				if (spell_type == RE::MagicSystem::SpellType::kLesserPower) {
-					HandleLesserPower(caster, casted_spell);
-				} else if (spell_type == RE::MagicSystem::SpellType::kPower) {
-					HandlePower(caster, casted_spell);
+		if (casted_spell) {
+			auto spell_type = casted_spell->GetSpellType();
+			if (spell_type == RE::MagicSystem::SpellType::kVoicePower) {
+				HandleShout(caster, casted_spell);
+			} else {
+				auto player = caster->As<RE::Actor>();
+				if (casted_spell == player->GetActorRuntimeData().selectedPower) {
+					if (spell_type == RE::MagicSystem::SpellType::kLesserPower) {
+						HandleLesserPower(caster, casted_spell);
+					} else if (spell_type == RE::MagicSystem::SpellType::kPower) {
+						HandlePower(caster, casted_spell);
+					}
 				}
 			}
 		}
