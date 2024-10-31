@@ -138,6 +138,8 @@ void SwitchManager::ImportSettings() {
 	enable_lesser_powers = ini.GetBoolValue("Settings", "bEnableLesserPowers", true);
 	enable_powers = ini.GetBoolValue("Settings", "bEnablePowers", true);
 
+	disable_out_of_combat = ini.GetBoolValue("Settings", "bOnlyInCombat", false);
+
 	std::list<CSimpleIniA::Entry> custom_powers;
 	ini.GetAllKeys("RecastLesserPowers", custom_powers);
 

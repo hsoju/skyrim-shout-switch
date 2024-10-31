@@ -14,6 +14,7 @@ public:
 	bool enable_shouts = true;
 	bool enable_lesser_powers = true;
 	bool enable_powers = true;
+	bool disable_out_of_combat = false;
 
 	std::map<RE::SpellItem*, int> recast_powers;
 

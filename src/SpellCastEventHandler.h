@@ -27,11 +27,14 @@ public:
 
 		RE::SpellItem* casted_spell = RE::TESForm::LookupByID<RE::SpellItem>(a_event->spell);
 		if (casted_spell) {
+			auto player = caster->As<RE::Actor>();
+			if (SwitchManager::GetSingleton()->disable_out_of_combat && !player->IsInCombat()) {
+				return RE::BSEventNotifyControl::kContinue;
+			}
 			auto spell_type = casted_spell->GetSpellType();
 			if (spell_type == RE::MagicSystem::SpellType::kVoicePower) {
 				HandleShout(caster, casted_spell);
 			} else {
-				auto player = caster->As<RE::Actor>();
 				if (casted_spell == player->GetActorRuntimeData().selectedPower) {
 					if (spell_type == RE::MagicSystem::SpellType::kLesserPower) {
 						HandleLesserPower(caster, casted_spell);
