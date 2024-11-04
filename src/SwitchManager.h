@@ -1,7 +1,7 @@
 #pragma once
 
 #include <shared_mutex>
-
+#include <SimpleIni.h>
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
@@ -16,6 +16,7 @@ public:
 	bool enable_powers = true;
 	bool disable_out_of_combat = false;
 
+	std::unordered_set<RE::TESForm*> ignore_combat_powers;
 	std::map<RE::SpellItem*, int> recast_powers;
 
 	json power_storage;
@@ -39,11 +40,15 @@ public:
 	bool HasSwitchPower(RE::TESForm* power);
 
 	void AdvancePower(RE::TESForm*& chosen_power, RE::TESForm* current_power, int& increment);
+	void CheckPowerCooldown(RE::TESForm*& chosen_power, RE::TESForm* current_power, RE::SpellItem* current_spell, int& increment);
 
 	RE::TESForm* FindNextPower(RE::TESForm* power, int start_idx, int increment);
 	RE::TESForm* FindNextPowerUsingIncrement(RE::TESForm* power, int start_idx, int increment);
 	RE::TESForm* GetNextPower(RE::TESForm* power, int increment);
 
+	
+	void ImportIgnoreCombatPowers(std::list<CSimpleIniA::Entry>& custom_powers);
+	void ImportRecastPowers(std::list<CSimpleIniA::Entry>& custom_powers);
 	void ImportSettings();
 
 	bool SerializeSave(SKSE::SerializationInterface* a_intfc);

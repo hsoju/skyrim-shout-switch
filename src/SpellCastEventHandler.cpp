@@ -7,24 +7,24 @@ RE::BGSEquipSlot* GetVoiceSlot()
 	return func();
 }
 
-void SpellCastEventHandler::EquipPower(RE::Actor* player, RE::TESForm* power)
+void SpellCastEventHandler::EquipPower(RE::Actor* player, RE::TESForm* current_power, RE::TESForm* chosen_power)
 {
-	auto power_type = power->GetFormType();
-	if (power_type == RE::FormType::Shout) {
-		RE::TESShout* shout = power->As<RE::TESShout>();
-		RE::ActorEquipManager::GetSingleton()->EquipShout(player, shout);
-	} else {
-		RE::SpellItem* voice_power = power->As<RE::SpellItem>();
-		RE::ActorEquipManager::GetSingleton()->EquipSpell(player, voice_power, GetVoiceSlot());
+	if (current_power != chosen_power) {
+		auto power_type = chosen_power->GetFormType();
+		if (power_type == RE::FormType::Shout) {
+			RE::TESShout* shout = chosen_power->As<RE::TESShout>();
+			RE::ActorEquipManager::GetSingleton()->EquipShout(player, shout);
+		} else {
+			RE::SpellItem* voice_power = chosen_power->As<RE::SpellItem>();
+			RE::ActorEquipManager::GetSingleton()->EquipSpell(player, voice_power, GetVoiceSlot());
+		}
 	}
 }
 
-void SpellCastEventHandler::HandleShout(RE::TESObjectREFR* caster, RE::SpellItem* casted_power)
+void SpellCastEventHandler::HandleShout(RE::Actor* player, RE::SpellItem* casted_power, SwitchManager* manager)
 {
-	auto manager = SwitchManager::GetSingleton();
 	if (manager->enable_shouts)
 	{
-		RE::Actor* player = caster->As<RE::Actor>();
 		RE::TESShout* shout = player->GetCurrentShout();
 		if (shout) {
 			auto shout_variations = shout->variations;
@@ -36,47 +36,34 @@ void SpellCastEventHandler::HandleShout(RE::TESObjectREFR* caster, RE::SpellItem
 				}
 			}
 			if (current_shout_idx >= 0) {
-				RE::TESForm* switched_power = SwitchManager::GetSingleton()->GetNextPower(shout, current_shout_idx + 1);
-				if (switched_power != shout) {
-					EquipPower(player, switched_power);
-				}
+				EquipPower(player, shout, manager->GetNextPower(shout, current_shout_idx + 1));
 			}
 		}
 	}
 }
 
-void SpellCastEventHandler::HandlePower(RE::TESObjectREFR* caster, RE::SpellItem* casted_power)
+void SpellCastEventHandler::HandlePower(RE::Actor* player, RE::SpellItem* casted_power, SwitchManager* manager)
 {
-	auto manager = SwitchManager::GetSingleton();
 	if (manager->enable_powers) {
-		RE::TESForm* switched_power = SwitchManager::GetSingleton()->GetNextPower(casted_power, 1);
-		if (switched_power != casted_power) {
-			RE::Actor* player = caster->As<RE::Actor>();
-			EquipPower(player, switched_power);
-		}
+		EquipPower(player, casted_power, manager->GetNextPower(casted_power, 1));
 	}
 }
 
-void SpellCastEventHandler::HandleLesserPower(RE::TESObjectREFR* caster, RE::SpellItem* casted_power)
+void SpellCastEventHandler::HandleLesserPower(RE::Actor* player, RE::SpellItem* casted_power, SwitchManager* manager)
 {
-	RE::TESForm* switched_power = SwitchManager::GetSingleton()->GetNextPower(casted_power, 1);
-	if (switched_power != casted_power) {
-		RE::Actor* player = caster->As<RE::Actor>();
-		EquipPower(player, switched_power);
-	}
+	EquipPower(player, casted_power, manager->GetNextPower(casted_power, 1));
 }
 
-void SpellCastEventHandler::CheckLesserPower(RE::TESObjectREFR* caster, RE::SpellItem* casted_power)
+void SpellCastEventHandler::CheckLesserPower(RE::Actor* player, RE::SpellItem* casted_power, SwitchManager* manager)
 {
-	auto manager = SwitchManager::GetSingleton();
 	if (manager->enable_lesser_powers) {
 		if (!manager->recast_powers.contains(casted_power)) {
-			HandleLesserPower(caster, casted_power);
+			HandleLesserPower(player, casted_power, manager);
 		} else {
 			manager->recast_powers[casted_power] = manager->recast_powers[casted_power] + 1;
 			if (manager->recast_powers[casted_power] >= 2) {
 				manager->recast_powers[casted_power] = 0;
-				HandleLesserPower(caster, casted_power);
+				HandleLesserPower(player, casted_power, manager);
 			}
 		}
 	}

@@ -7,16 +7,16 @@
 class SpellCastEventHandler : public RE::BSTEventSink<RE::TESSpellCastEvent>
 {
 public:
-	void EquipPower(RE::Actor* player, RE::TESForm* power);
+	void EquipPower(RE::Actor* player, RE::TESForm* current_power, RE::TESForm* chosen_power);
 
-	void HandleShout(RE::TESObjectREFR* caster, RE::SpellItem* casted_power);
-	void HandlePower(RE::TESObjectREFR* caster, RE::SpellItem* casted_power);
-	void CheckLesserPower(RE::TESObjectREFR* caster, RE::SpellItem* casted_power);
-	void HandleLesserPower(RE::TESObjectREFR* caster, RE::SpellItem* casted_power);
+	void HandleShout(RE::Actor* player, RE::SpellItem* casted_power, SwitchManager* manager);
+	void HandlePower(RE::Actor* player, RE::SpellItem* casted_power, SwitchManager* manager);
+	void CheckLesserPower(RE::Actor* player, RE::SpellItem* casted_power, SwitchManager* manager);
+	void HandleLesserPower(RE::Actor* player, RE::SpellItem* casted_power, SwitchManager* manager);
 
 	virtual RE::BSEventNotifyControl ProcessEvent(const RE::TESSpellCastEvent* a_event, RE::BSTEventSource<RE::TESSpellCastEvent>*)
 	{
-		auto caster = a_event->object.get();
+		RE::TESObjectREFR* caster = a_event->object.get();
 		if (!caster || !caster->IsPlayerRef()) {
 			return RE::BSEventNotifyControl::kContinue;
 		}
@@ -27,19 +27,20 @@ public:
 
 		RE::SpellItem* casted_spell = RE::TESForm::LookupByID<RE::SpellItem>(a_event->spell);
 		if (casted_spell) {
-			auto player = caster->As<RE::Actor>();
-			if (SwitchManager::GetSingleton()->disable_out_of_combat && !player->IsInCombat()) {
+			RE::Actor* player = caster->As<RE::Actor>();
+			SwitchManager* manager = SwitchManager::GetSingleton();
+			if (manager->disable_out_of_combat && !player->IsInCombat()) {
 				return RE::BSEventNotifyControl::kContinue;
 			}
-			auto spell_type = casted_spell->GetSpellType();
+			RE::MagicSystem::SpellType spell_type = casted_spell->GetSpellType();
 			if (spell_type == RE::MagicSystem::SpellType::kVoicePower) {
-				HandleShout(caster, casted_spell);
+				HandleShout(player, casted_spell, manager);
 			} else {
 				if (casted_spell == player->GetActorRuntimeData().selectedPower) {
 					if (spell_type == RE::MagicSystem::SpellType::kLesserPower) {
-						HandleLesserPower(caster, casted_spell);
+						HandleLesserPower(player, casted_spell, manager);
 					} else if (spell_type == RE::MagicSystem::SpellType::kPower) {
-						HandlePower(caster, casted_spell);
+						HandlePower(player, casted_spell, manager);
 					}
 				}
 			}

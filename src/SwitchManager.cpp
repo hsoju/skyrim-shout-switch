@@ -1,7 +1,3 @@
-#include <shared_mutex>
-
-#include <SimpleIni.h>
-
 #include "SwitchManager.h"
 #include "Serialization.h"
 
@@ -77,30 +73,37 @@ void SwitchManager::AdvancePower(RE::TESForm* &chosen_power, RE::TESForm* curren
 	increment -= 1;
 }
 
+void SwitchManager::CheckPowerCooldown(RE::TESForm*& chosen_power, RE::TESForm* current_power, RE::SpellItem* current_spell,
+	int& increment)
+{
+	RE::MagicSystem::CannotCastReason* cast_reason = nullptr;
+	RE::Actor* player = RE::PlayerCharacter::GetSingleton()->As<RE::Actor>();
+	if (player->CheckCast(current_spell, false, cast_reason)) {
+		AdvancePower(chosen_power, current_power, increment);
+	}
+}
+
 RE::TESForm* SwitchManager::FindNextPower(RE::TESForm* power, int start_idx, int increment)
 {
-	auto player = RE::PlayerCharacter::GetSingleton()->As<RE::Actor>();
 	int current_size = switch_powers.size();
 	int current_idx = (start_idx + 1) % current_size;
 	RE::TESForm* chosen_power = power;
 	int loop_iterations = 0;
 	while (increment > 0 && (loop_iterations < current_size)) {
 		RE::TESForm* current_power = switch_powers[(current_idx % current_size)];
-		auto current_type = current_power->GetFormType();
-		if (current_type == RE::FormType::Spell && (enable_lesser_powers || enable_powers)) {
-			auto current_spell = current_power->As<RE::SpellItem>();
-			auto current_type = current_spell->GetSpellType();
-			if (current_type == RE::MagicSystem::SpellType::kLesserPower && enable_lesser_powers) {
-				AdvancePower(chosen_power, current_power, increment);
-			} else if (current_type == RE::MagicSystem::SpellType::kPower && enable_powers) {
-				RE::MagicSystem::CannotCastReason* cast_reason = nullptr;
-				bool can_cast = player->CheckCast(current_spell, false, cast_reason);
-				if (can_cast) {
+		if (!ignore_combat_powers.contains(current_power) || !RE::PlayerCharacter::GetSingleton()->IsInCombat()) {
+			RE::FormType current_type = current_power->GetFormType();
+			if (current_type == RE::FormType::Spell && (enable_lesser_powers || enable_powers)) {
+				RE::SpellItem* current_spell = current_power->As<RE::SpellItem>();
+				RE::MagicSystem::SpellType current_type = current_spell->GetSpellType();
+				if (current_type == RE::MagicSystem::SpellType::kLesserPower && enable_lesser_powers) {
 					AdvancePower(chosen_power, current_power, increment);
+				} else if (current_type == RE::MagicSystem::SpellType::kPower && enable_powers) {
+					CheckPowerCooldown(chosen_power, current_power, current_spell, increment);
 				}
+			} else if (current_type == RE::FormType::Shout && enable_shouts) {
+				AdvancePower(chosen_power, current_power, increment);
 			}
-		} else if (current_type == RE::FormType::Shout && enable_shouts) {
-			AdvancePower(chosen_power, current_power, increment);
 		}
 		current_idx = (current_idx + 1) % current_size;
 		loop_iterations += 1;
@@ -128,6 +131,30 @@ RE::TESForm* SwitchManager::GetNextPower(RE::TESForm* power, int increment) {
 	return power;
 }
 
+void SwitchManager::ImportIgnoreCombatPowers(std::list<CSimpleIniA::Entry>& ignore_powers)
+{
+	for (auto& entry : ignore_powers) {
+		auto editor_id = std::string(entry.pItem);
+		auto given_form = RE::TESForm::LookupByEditorID(editor_id);
+		if (given_form) {
+			ignore_combat_powers.insert(given_form);
+			logger::info("{}: added to Ignore in Combat list", editor_id);
+		}
+	}
+}
+
+void SwitchManager::ImportRecastPowers(std::list<CSimpleIniA::Entry>& custom_powers)
+{
+	for (auto& entry : custom_powers) {
+		auto editor_id = std::string(entry.pItem);
+		auto given_power = RE::TESForm::LookupByEditorID<RE::SpellItem>(editor_id);
+		if (given_power) {
+			recast_powers[given_power] = 0;
+			logger::info("{}: added to Recast list", editor_id);
+		}
+	}
+}
+
 void SwitchManager::ImportSettings() {
 	std::lock_guard<std::shared_mutex> lk(settings_mtx);
 	CSimpleIniA ini;
@@ -142,18 +169,11 @@ void SwitchManager::ImportSettings() {
 
 	std::list<CSimpleIniA::Entry> custom_powers;
 	ini.GetAllKeys("RecastLesserPowers", custom_powers);
+	ImportRecastPowers(custom_powers);
 
-	for (auto& entry : custom_powers) {
-		auto editor_id = std::string(entry.pItem);
-		auto given_form = RE::TESForm::LookupByEditorID(editor_id);
-		if (given_form) {
-			auto given_power = given_form->As<RE::SpellItem>();
-			if (given_power) {
-				recast_powers[given_power] = 0;
-				logger::info("{}: added to Recast List", editor_id);
-			}
-		}
-	}
+	std::list<CSimpleIniA::Entry> ignore_powers;
+	ini.GetAllKeys("SkipInCombat", ignore_powers);
+	ImportRecastPowers(ignore_powers);
 }
 
 bool SwitchManager::SerializeSave(SKSE::SerializationInterface* a_intfc)
