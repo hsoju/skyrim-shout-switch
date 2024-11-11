@@ -173,7 +173,7 @@ void SwitchManager::ImportSettings() {
 
 	std::list<CSimpleIniA::Entry> ignore_powers;
 	ini.GetAllKeys("SkipInCombat", ignore_powers);
-	ImportRecastPowers(ignore_powers);
+	ImportIgnoreCombatPowers(ignore_powers);
 }
 
 bool SwitchManager::SerializeSave(SKSE::SerializationInterface* a_intfc)
