@@ -76,8 +76,6 @@ namespace util
 #include "Plugin.h"
 #include "Serialization.h"
 
-bool inputs_tracked = false;
-
 bool SetupSettings();
 bool SetupFavoritesTracker();
 bool SetupSpellCastHandler();
@@ -85,17 +83,8 @@ bool SetupSpellCastHandler();
 void MessageHandler(SKSE::MessagingInterface::Message* a_msg)
 {
 	switch (a_msg->type) {
-	case SKSE::MessagingInterface::kNewGame:
-		if (!inputs_tracked) {
-			SetupFavoritesTracker();
-			inputs_tracked = true;
-		}
-		break;
-	case SKSE::MessagingInterface::kPostLoadGame:
-		if (!inputs_tracked) {
-			SetupFavoritesTracker();
-			inputs_tracked = true;
-		}
+	case SKSE::MessagingInterface::kInputLoaded:
+		SetupFavoritesTracker();
 		break;
 	case SKSE::MessagingInterface::kDataLoaded:
 		SetupSettings();
